@@ -33,18 +33,18 @@ Outputs the latest assistant response from the specified session.
 ```bash
 ./local/trace.py /path/to/project --list-sessions
 ```
-Lists all session IDs for the project directory, sorted by modified date (newest first).
+Lists all session IDs for the project directory, sorted by modified date (oldest first, like `ls -ltr`).
 
 ### List Messages
 ```bash
 ./local/trace.py /path/to/project --list-messages
 ```
-Lists all messages and their parts for the project directory in YAML format, sorted by modified date (newest first).
+Lists all messages and their parts for the project directory in YAML format, with sessions sorted by most recent message (oldest first, like `ls -ltr`), and messages within sessions sorted by modified date (oldest first).
 
 ```bash
 ./local/trace.py /path/to/project --list-messages --session-id <session_id>
 ```
-Lists all messages and their parts for the specified session in YAML format, sorted by modified date (newest first).
+Lists all messages and their parts for the specified session in YAML format, sorted by modified date (oldest first).
 
 ### List Sessions
 ```bash

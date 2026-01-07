@@ -60,7 +60,7 @@ def main():
             mtime = os.path.getmtime(f)
             sessions.append((mtime, f"{sid} {path}"))
         if sessions:
-            sessions.sort(key=lambda x: x[0], reverse=True)
+            sessions.sort(key=lambda x: x[0], reverse=False)
             print("\n".join([item[1] for item in sessions]))
         return
 
@@ -75,8 +75,7 @@ def main():
         sessions_data = {}
         home = os.path.expanduser("~")
         for sid in sessions_to_check:
-            session_mtime = os.path.getmtime(os.path.join(storage_base, "session", project_id, f"{sid}.json"))
-            sessions_data[sid] = {"mtime": session_mtime, "messages": {}}
+            sessions_data[sid] = {"max_message_mtime": 0, "messages": {}}
             message_dir = os.path.join(storage_base, "message", sid)
             if os.path.exists(message_dir):
                 messages = []
@@ -86,6 +85,10 @@ def main():
                     if path.startswith(home):
                         path = "~" + path[len(home):]
                     mtime = os.path.getmtime(f)
+                    sessions_data[sid]["max_message_mtime"] = max(sessions_data[sid]["max_message_mtime"], mtime)
+                    with open(f, 'r') as mf:
+                        msg_data = json.load(mf)
+                        role = msg_data.get('role', 'unknown')
                     parts = {}
                     part_dir = os.path.join(storage_base, "part", mid)
                     if os.path.exists(part_dir):
@@ -95,12 +98,12 @@ def main():
                             if ppath.startswith(home):
                                 ppath = "~" + ppath[len(home):]
                             parts[pid] = ppath
-                    messages.append((mtime, mid, path, parts))
-                messages.sort(key=lambda x: x[0], reverse=True)
-                for mtime, mid, path, parts in messages:
-                    sessions_data[sid]["messages"][mid] = {"path": path, "parts": parts}
-        # Sort sessions by mtime
-        sorted_sessions = sorted(sessions_data.items(), key=lambda x: x[1]["mtime"], reverse=True)
+                    messages.append((mtime, mid, path, role, parts))
+                messages.sort(key=lambda x: x[0], reverse=False)
+                for mtime, mid, path, role, parts in messages:
+                    sessions_data[sid]["messages"][mid] = {"path": path, "role": role, "parts": parts}
+        # Sort sessions by max message mtime (oldest first, like ls -ltr)
+        sorted_sessions = sorted(sessions_data.items(), key=lambda x: x[1]["max_message_mtime"], reverse=False)
         output = {"sessions": {sid: {"messages": data["messages"]} for sid, data in sorted_sessions}}
         print(yaml.dump(output, default_flow_style=False, sort_keys=False))
         return
@@ -146,18 +149,64 @@ def main():
 
     # Output the content of the latest message
     msg_id = os.path.splitext(os.path.basename(latest_msg))[0]
+    with open(latest_msg, 'r') as f:
+        msg_data = json.load(f)
+        role = msg_data.get('role', 'unknown')
+    path = latest_msg
+    home = os.path.expanduser("~")
+    if path.startswith(home):
+        path = "~" + path[len(home):]
+
     part_dir = os.path.join(storage_base, "part", msg_id)
     logger.info('part_dir:', part_dir)
+    parts_dict = {}
+    parts_content = []
+    if os.path.exists(part_dir):
+        for part_file in glob.glob(os.path.join(part_dir, "*.json")):
+            with open(part_file, 'r') as f:
+                data = json.load(f)
+                part_type = data.get('type')
+                pid = os.path.splitext(os.path.basename(part_file))[0]
+                ppath = part_file
+                if ppath.startswith(home):
+                    ppath = "~" + ppath[len(home):]
+                parts_dict[pid] = ppath
+                if part_type in ('text', 'reasoning'):
+                    parts_content.append((part_type, data.get('text', '')))
+
+    # Log the message details
+    message_dict = {msg_id: {"path": path, "role": role, "parts": parts_dict}}
+    logger.info(yaml.dump({"messages": message_dict}, default_flow_style=False, sort_keys=False))
     parts = []
     if os.path.exists(part_dir):
         for part_file in glob.glob(os.path.join(part_dir, "*.json")):
             with open(part_file, 'r') as f:
                 data = json.load(f)
-                if data.get('type') in ('text', 'reasoning'):
-                    parts.append(data.get('text', ''))
+                part_type = data.get('type')
+                if part_type in ('text', 'reasoning'):
+                    parts.append((part_type, data.get('text', '')))
 
-    logger.info('the last message:')
-    print('\n'.join(parts))
+    # Sort parts: reasoning first, then text
+    type_order = {'reasoning': 0, 'text': 1}
+    parts_content.sort(key=lambda x: type_order.get(x[0], 99))
+
+    # Separate reasoning and text
+    reasoning_texts = []
+    text_texts = []
+    for part_type, text in parts_content:
+        if part_type == 'reasoning':
+            reasoning_texts.append(text)
+        elif part_type == 'text':
+            text_texts.append(text)
+
+    logger.info('the last assitant message:')
+    if reasoning_texts:
+        print("<thinking>")
+        print('\n'.join(reasoning_texts))
+        print("</thinking>")
+        print()
+    if text_texts:
+        print('\n'.join(text_texts))
 
 if __name__ == "__main__":
     main()
