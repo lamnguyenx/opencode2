@@ -1,8 +1,6 @@
 # OpenCode Local Storage Tools
 
-See [docs/refs/how_opencode_organize_sessions_and_messages.md](docs/refs/how_opencode_organize_sessions_and_messages.md) for details on OpenCode's storage structure.
-
-This repository contains scripts for interacting with OpenCode's local storage on macOS and Linux (stored in `~/.local/share/opencode/storage/`). These tools help retrieve session data, messages, and assistant responses without needing the GUI.
+> **Summary**: Scripts for accessing OpenCode's local storage on macOS and Linux to retrieve sessions, messages, and assistant responses. This repository contains scripts for interacting with OpenCode's local storage on macOS and Linux (stored in `~/.local/share/opencode/storage/`). These tools help retrieve session data, messages, and assistant responses without needing the GUI.
 
 ## Setup
 
