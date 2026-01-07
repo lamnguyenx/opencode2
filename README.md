@@ -1,5 +1,7 @@
 # OpenCode Local Storage Tools
 
+See [docs/refs/how_opencode_organize_sessions_and_messages.md](docs/refs/how_opencode_organize_sessions_and_messages.md) for details on OpenCode's storage structure.
+
 This repository contains scripts for interacting with OpenCode's local storage on macOS and Linux (stored in `~/.local/share/opencode/storage/`). These tools help retrieve session data, messages, and assistant responses without needing the GUI.
 
 ## Setup
@@ -10,7 +12,7 @@ This repository contains scripts for interacting with OpenCode's local storage o
 
 ## Scripts
 
-- **`local/trace.py`**: Retrieves and prints the latest assistant message for a given directory. Outputs reasoning and text parts with newlines for readability.
+- **`local/trace.py`**: Retrieves and prints the latest assistant message for a given directory or specific session, or lists sessions/messages in YAML format. Outputs reasoning and text parts with newlines for readability.
 - **`run.ts`**: Lists all sessions for a directory using the OpenCode SDK.
 - **`Makefile`**: Provides `make run FOLDER=<dir>` to execute `run.ts` easily.
 
@@ -21,6 +23,28 @@ This repository contains scripts for interacting with OpenCode's local storage o
 ./local/trace.py /path/to/project
 ```
 Outputs the most recent assistant response across all sessions in the project.
+
+```bash
+./local/trace.py /path/to/project --session-id <session_id>
+```
+Outputs the latest assistant response from the specified session.
+
+### List Sessions
+```bash
+./local/trace.py /path/to/project --list-sessions
+```
+Lists all session IDs for the project directory, sorted by modified date (newest first).
+
+### List Messages
+```bash
+./local/trace.py /path/to/project --list-messages
+```
+Lists all messages and their parts for the project directory in YAML format, sorted by modified date (newest first).
+
+```bash
+./local/trace.py /path/to/project --list-messages --session-id <session_id>
+```
+Lists all messages and their parts for the specified session in YAML format, sorted by modified date (newest first).
 
 ### List Sessions
 ```bash
@@ -33,7 +57,7 @@ npx tsx run.ts /path/to/project
 
 ## Requirements
 
-- Python 3 for `trace.py`.
+- Python 3 for `trace.py` (requires `pyyaml`: `pip install pyyaml`).
 - Node.js and OpenCode SDK for `run.ts`.
 - macOS or Linux with OpenCode installed.
 
