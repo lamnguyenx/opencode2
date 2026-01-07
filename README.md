@@ -29,6 +29,16 @@ Outputs the most recent assistant response across all sessions in the project.
 ```
 Outputs the latest assistant response from the specified session.
 
+```bash
+./local/trace.py /path/to/project --max-lines 10
+```
+Limits output to the last 10 lines of user and assistant text.
+
+```bash
+./local/trace.py /path/to/project --single-line
+```
+Outputs text as a single line with newlines escaped (e.g., "line1\nline2").
+
 ### List Sessions
 ```bash
 ./local/trace.py /path/to/project --list-sessions

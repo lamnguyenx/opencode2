@@ -116,7 +116,7 @@ def list_messages(
 
 
 def retrieve_message(
-    storage_base: str, project_id: str, session_id: tp.Optional[str] = None
+    storage_base: str, project_id: str, session_id: tp.Optional[str] = None, max_lines: tp.Optional[int] = None, single_line: bool = False, max_chars: tp.Optional[int] = None, max_chars_tolerance: int = 8
 ) -> None:
     session_dir = os.path.join(storage_base, "session", project_id)
 
@@ -240,31 +240,65 @@ def retrieve_message(
             "role": user_data["role"],
             "parts": user_data["parts_dict"]
         }
-    logger.info(
+    logger.debug(
         yaml.dump({"messages": message_dict}, default_flow_style=False, sort_keys=False)
     )
 
     # Output user message if found
-    logger.info('message:')
+    logger.debug('message:')
     if user_data:
-        if user_data["reasoning_texts"]:
-            print("<thinking>")
-            print("\n".join(user_data["reasoning_texts"]))
-            print("</thinking>")
-            print()
         if user_data["text_texts"]:
-            print("\n".join(user_data["text_texts"]))
+            text = user_data["text_texts"]
+            joined = "\n".join(text)
+            lines = joined.split('\n')
+            if max_lines:
+                lines = lines[-max_lines:]
+            cleaned = '\n'.join(lines).rstrip('\n')
+            logger.debug('single_line:', single_line)
+            if single_line:
+                cleaned = cleaned.replace('\n', '\\n')
+            if max_chars and len(cleaned) > max_chars:
+                target_pos = max_chars
+                search_start = target_pos
+                search_end = min(len(cleaned), target_pos + max_chars_tolerance)
+                snap_pos = None
+                for i in range(search_start, search_end):
+                    if cleaned[i] in ' \n':
+                        snap_pos = i
+                        break
+                if snap_pos is not None:
+                    cleaned = cleaned[:snap_pos + 1].rstrip(' \n')
+                else:
+                    cleaned = cleaned[:target_pos]
+            print(cleaned.strip())
 
     print("# <<<<<<<<<<<<<<<<<<<<< user / assistant >>>>>>>>>>>>>>>>>>>>")
 
     # Output assistant message
-    if assistant_data["reasoning_texts"]:
-        print("<thinking>")
-        print("\n".join(assistant_data["reasoning_texts"]))
-        print("</thinking>")
-        print()
     if assistant_data["text_texts"]:
-        print("\n".join(assistant_data["text_texts"]))
+        text = assistant_data["text_texts"]
+        joined = "\n".join(text)
+        lines = joined.split('\n')
+        if max_lines:
+            lines = lines[-max_lines:]
+        cleaned = '\n'.join(lines).rstrip('\n')
+        logger.debug('single_line:', single_line)
+        if single_line:
+            cleaned = cleaned.replace('\n', '\\n')
+        if max_chars and len(cleaned) > max_chars:
+            target_pos = max_chars
+            search_start = target_pos
+            search_end = min(len(cleaned), target_pos + max_chars_tolerance)
+            snap_pos = None
+            for i in range(search_start, search_end):
+                if cleaned[i] in ' \n':
+                    snap_pos = i
+                    break
+            if snap_pos is not None:
+                cleaned = cleaned[:snap_pos + 1].rstrip(' \n')
+            else:
+                cleaned = cleaned[:target_pos]
+        print(cleaned.strip())
 
 
 def main() -> None:
@@ -285,6 +319,27 @@ def main() -> None:
         action="store_true",
         help="List all messages for the directory or session and exit",
     )
+    parser.add_argument(
+        "--max-lines", "-n",
+        type=int,
+        help="Limit output to the last N lines of user and assistant text",
+    )
+    parser.add_argument(
+        "--single-line", "-s",
+        action="store_true",
+        help="Output text as a single line with newlines escaped",
+    )
+    parser.add_argument(
+        "--max-chars", "-c",
+        type=int,
+        help="Limit output to the last N characters",
+    )
+    parser.add_argument(
+        "--max-chars-tolerance",
+        type=int,
+        default=8,
+        help="Tolerance for auto-snapping --max-chars truncation to nearest space or newline (default: 8)",
+    )
     args = parser.parse_args()
 
     directory = os.path.realpath(args.directory)
@@ -300,7 +355,7 @@ def main() -> None:
     elif args.list_messages:
         list_messages(storage_base, project_id, args.session_id)
     else:
-        retrieve_message(storage_base, project_id, args.session_id)
+        retrieve_message(storage_base, project_id, args.session_id, args.max_lines, args.single_line, args.max_chars, args.max_chars_tolerance)
 
 
 if __name__ == "__main__":
