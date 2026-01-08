@@ -7,7 +7,6 @@ import json
 import argparse
 import typing as tp
 import yaml
-import re
 import time
 from mini_logger import getLogger
 
@@ -33,7 +32,10 @@ def get_project_id(directory: str) -> str:
     return "global"
 
 
-def list_sessions(storage_base: str, project_id: str) -> None:
+def list_sessions(
+    storage_base: str,
+    project_id: str,
+) -> None:
     session_dir = os.path.join(storage_base, "session", project_id)
     if not os.path.exists(session_dir):
         print(f"No sessions found for project {project_id}")
@@ -280,8 +282,8 @@ def retrieve_message(
         if single_line:
             cleaned = cleaned.replace("\n", "\\n")
         # cleaned = re.sub(
-        #     r"(\\n)+",
-        #     lambda m: f"[#truncated:↵ × {len(m.group(0)) // 2}]",
+        #     r'(\\n)+',
+        #     lambda m: f'[#truncated:↵ × {len(m.group(0)) // 2}]',
         #     cleaned,
         # )
 
@@ -317,7 +319,10 @@ def retrieve_message(
     return user_cleaned, assistant_cleaned
 
 
-def print_message(user_msg: str, assistant_msg: str) -> None:
+def print_message(
+    user_msg: str,
+    assistant_msg: str,
+) -> None:
     print("[#tag:@USER]", user_msg)
     print("[#tag:@ASSISTANT]", assistant_msg)
 
