@@ -8,6 +8,7 @@ import argparse
 import typing as tp
 import yaml
 import re
+import time
 from mini_logger import getLogger
 
 logger = getLogger(__name__)
@@ -166,6 +167,15 @@ def retrieve_message(
     assistant_messages.sort(key=lambda x: x[0], reverse=True)
     latest_msg = assistant_messages[0][1]
 
+    # Wait for assistant message to be completed if it's still being written
+    while True:
+        with open(latest_msg, mode="r") as f:
+            data = json.load(f)
+        if data.get("role") != "assistant" or data.get("time", {}).get("completed"):
+            break
+        logger.debug("Waiting for assistant message to complete...")
+        time.sleep(0.1)
+
     # Find the preceding user message in the same session
     message_dir = os.path.dirname(latest_msg)
     msg_files = sorted(
@@ -183,10 +193,14 @@ def retrieve_message(
                 break
 
     # Function to extract message content and parts
-    def extract_message_content(msg_file):
+    def extract_message_content(msg_file, preloaded_msg_data=None):
         msg_id = os.path.splitext(os.path.basename(msg_file))[0]
-        with open(msg_file, mode="r") as f:
-            msg_data = json.load(f)
+        if preloaded_msg_data is None:
+            with open(msg_file, mode="r") as f:
+                msg_data = json.load(f)
+                role = msg_data.get("role", "unknown")
+        else:
+            msg_data = preloaded_msg_data
             role = msg_data.get("role", "unknown")
         path = msg_file
         home = os.path.expanduser("~")
@@ -227,7 +241,7 @@ def retrieve_message(
         }
 
     # Extract content for assistant message
-    assistant_data = extract_message_content(latest_msg)
+    assistant_data = extract_message_content(latest_msg, data)
 
     # Find and extract user message if exists
     user_data = None
